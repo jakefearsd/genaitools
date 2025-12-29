@@ -5,57 +5,9 @@ Uses optimal parameters discovered through tuning sessions.
 """
 
 import argparse
-import json
 import requests
 
-try:
-    from ddgs import DDGS
-except ImportError:
-    from duckduckgo_search import DDGS
-
-
-# Defaults based on tuning with qwen3:14b on 16GB GPU
-# Model supports up to 40960 context, but 16384 is safe for 16GB VRAM
-# (model uses ~10GB, leaving ~6GB for KV cache at ~160KB/token)
-DEFAULTS = {
-    "ollama_url": "http://inference.jakefear.com:11434",
-    "model": "qwen3:14b",
-    "num_predict": 16384,
-    "num_ctx": 16384,
-    "repeat_penalty": 1.1,
-    "temperature": 0.7,
-    "num_gpu": 99,
-    "word_count": 2500,
-    "think": True,  # Enable chain-of-thought reasoning for qwen3
-}
-
-
-def search_duckduckgo(topic: str, max_results: int = 8) -> list[dict]:
-    """Scrape DuckDuckGo for research content."""
-    print(f"Searching DuckDuckGo for: {topic}")
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(topic, max_results=max_results))
-        print(f"Found {len(results)} search results")
-        return results
-    except Exception as e:
-        print(f"Search failed: {e}")
-        return []
-
-
-def build_research_context(results: list[dict]) -> str:
-    """Format search results into research context."""
-    if not results:
-        return "No research available. Use your training knowledge."
-
-    context_parts = []
-    for i, result in enumerate(results, 1):
-        title = result.get("title", "Untitled")
-        body = result.get("body", "")
-        href = result.get("href", "")
-        context_parts.append(f"[{i}] {title}\n{body}\nSource: {href}")
-
-    return "\n\n".join(context_parts)
+from genaitools import DEFAULTS, search_duckduckgo, build_research_context, count_words
 
 
 def build_prompt(
@@ -161,11 +113,6 @@ def generate_article(
         return f"Error: {e}"
 
 
-def count_words(text: str) -> int:
-    """Count words in text."""
-    return len(text.split())
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Simple one-shot article generator using Ollama",
@@ -233,7 +180,8 @@ def main():
 
     # Output
     word_count = count_words(article)
-    print(f"\nGenerated {word_count} words ({word_count * 100 // args.words}% of target)")
+    percentage = int(word_count * 100 / args.words)
+    print(f"\nGenerated {word_count} words ({percentage}% of target)")
 
     if args.output:
         with open(args.output, "w") as f:

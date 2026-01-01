@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from genaitools import DEFAULTS, generate, search_duckduckgo, build_research_context
+from genaitools import DEFAULTS, generate, search_duckduckgo, build_research_context, deep_research, tprint
 
 # =============================================================================
 # Module Constants
@@ -286,6 +286,16 @@ def main():
         help="Skip DuckDuckGo research"
     )
     parser.add_argument(
+        "--deep-research",
+        action="store_true",
+        help="Fetch and summarize full web pages (slower, richer context)"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Skip research cache (use with --deep-research)"
+    )
+    parser.add_argument(
         "--ollama-url",
         default=DEFAULTS["ollama_url"],
         help="Ollama API URL"
@@ -318,6 +328,12 @@ def main():
         action="store_true",
         help="Disable chain-of-thought reasoning"
     )
+    parser.add_argument(
+        "--num-gpu",
+        type=int,
+        default=None,
+        help="Number of GPU layers (default: let Ollama auto-detect)"
+    )
 
     args = parser.parse_args()
 
@@ -326,14 +342,23 @@ def main():
 
     # Check if output file already exists
     if args.output and Path(args.output).exists():
-        print(f"Error: Output file already exists: {args.output}", file=sys.stderr)
+        tprint(f"Error: Output file already exists: {args.output}", file=sys.stderr)
         sys.exit(1)
 
     # Research phase
     research_context = None
     if not args.no_search:
-        results = search_duckduckgo(args.topic)
-        research_context = build_research_context(results)
+        if args.deep_research:
+            research_context = deep_research(
+                topic=args.topic,
+                model=args.model,
+                ollama_url=args.ollama_url,
+                use_cache=not args.no_cache,
+                verbose=True,
+            )
+        else:
+            results = search_duckduckgo(args.topic)
+            research_context = build_research_context(results)
 
     # Build prompt
     prompt = build_outline_prompt(
@@ -347,7 +372,7 @@ def main():
         research_context=research_context,
     )
 
-    print(f"Generating outline with {args.model}...")
+    tprint(f"Generating outline with {args.model}...")
 
     # Generate outline
     response = generate(
@@ -358,18 +383,19 @@ def main():
         think=think_enabled,
         num_predict=args.num_predict,
         num_ctx=DEFAULTS["num_ctx"],
+        num_gpu=args.num_gpu,
     )
 
     if response.startswith("Error:"):
-        print(response, file=sys.stderr)
+        tprint(response, file=sys.stderr)
         sys.exit(1)
 
     # Parse JSON from response
     try:
         json_data = extract_json(response)
     except ValueError as e:
-        print(f"Failed to parse outline: {e}", file=sys.stderr)
-        print(f"Raw response:\n{response}", file=sys.stderr)
+        tprint(f"Failed to parse outline: {e}", file=sys.stderr)
+        tprint(f"Raw response:\n{response}", file=sys.stderr)
         sys.exit(1)
 
     # Build full YAML structure
@@ -390,8 +416,8 @@ def main():
     if args.output:
         with open(args.output, "w") as f:
             f.write(yaml_output)
-        print(f"Outline saved to: {args.output}")
-        print(f"Sections: {len(outline['sections'])}")
+        tprint(f"Outline saved to: {args.output}")
+        tprint(f"Sections: {len(outline['sections'])}")
     else:
         print(yaml_output)
 

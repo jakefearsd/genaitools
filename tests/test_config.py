@@ -8,6 +8,7 @@ class TestDefaults:
 
     def test_defaults_has_required_keys(self):
         """Verify all required keys are present in DEFAULTS."""
+        # Note: num_gpu intentionally omitted - let Ollama auto-detect based on VRAM
         required_keys = [
             "ollama_url",
             "model",
@@ -15,7 +16,6 @@ class TestDefaults:
             "num_ctx",
             "repeat_penalty",
             "temperature",
-            "num_gpu",
             "think",
         ]
         for key in required_keys:
@@ -29,7 +29,7 @@ class TestDefaults:
         assert isinstance(DEFAULTS["num_ctx"], int)
         assert isinstance(DEFAULTS["repeat_penalty"], (int, float))
         assert isinstance(DEFAULTS["temperature"], (int, float))
-        assert isinstance(DEFAULTS["num_gpu"], int)
+        # num_gpu intentionally omitted from DEFAULTS
         assert isinstance(DEFAULTS["think"], bool)
 
     def test_defaults_reasonable_values(self):

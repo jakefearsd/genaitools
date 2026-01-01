@@ -66,12 +66,14 @@ python simple_publisher.py \
 | `-c, --context` | Additional guidance for the writer | None |
 | `-o, --output` | Output file (or stdout) | stdout |
 | `--no-search` | Skip DuckDuckGo research | False |
+| `--deep-research` | Fetch full pages and summarize (richer context) | False |
+| `--no-cache` | Skip research cache (use with --deep-research) | False |
 | `--think` | Enable chain-of-thought reasoning | True |
 | `--model` | Ollama model | qwen3:14b |
 
 ### How It Works
 
-1. **Research**: Searches DuckDuckGo for relevant content (8 results)
+1. **Research**: Searches DuckDuckGo for relevant content (snippets or full pages with `--deep-research`)
 2. **Prompt Construction**: Builds a structured prompt with persona, task, guidance, research, and requirements
 3. **Generation**: Single LLM call generates the complete article
 4. **Output**: Writes markdown to file or stdout
@@ -117,6 +119,8 @@ python document_builder.py \
 | `-p, --persona` | Writer persona | None |
 | `-c, --context` | Additional guidance | None |
 | `-o, --output` | Output YAML file | stdout |
+| `--deep-research` | Fetch full pages and summarize | False |
+| `--no-cache` | Skip research cache | False |
 
 ### Document Builder Options
 
@@ -276,6 +280,30 @@ Common utilities used across all tools:
 | `ollama_client.py` | `generate()`, `count_words()` |
 | `research.py` | `search_duckduckgo()`, `build_research_context()` |
 | `embeddings.py` | `get_embedding()`, `cosine_similarity()`, `find_similar_pairs()` |
+| `deep_research.py` | `deep_research()` - RAG pipeline for richer context |
+
+### Deep Research (RAG)
+
+The `--deep-research` flag enables a richer research pipeline:
+
+1. **Search**: DuckDuckGo search for 3 relevant pages
+2. **Fetch**: Download full HTML pages (15s timeout)
+3. **Strip**: Remove scripts, styles, nav elements; extract plain text
+4. **Summarize**: LLM generates 200-400 word focused summary per page
+5. **Cache**: Results cached by URL hash in `~/.cache/genaitools/research/`
+
+```bash
+# With deep research
+python simple_publisher.py -t "Docker Security" --deep-research
+
+# Force fresh fetch (skip cache)
+python outline_builder.py -t "Kubernetes" --deep-research --no-cache
+```
+
+**Trade-offs**:
+- ~20-30 seconds vs ~2 seconds for regular search
+- 3 additional LLM calls for summarization
+- Much richer context (~1500-2500 chars of focused summaries)
 
 ### Configuration
 
@@ -322,6 +350,7 @@ pytest tests/ --use-ollama --use-search
 | `test_outline_builder.py` | Prompt building, JSON extraction, YAML output |
 | `test_document_builder.py` | Outline loading, section prompts, key points |
 | `test_link_builder.py` | Embeddings, similarity, link insertion |
+| `test_deep_research.py` | Page fetching, HTML stripping, summarization, caching |
 
 ---
 

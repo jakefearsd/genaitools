@@ -10,6 +10,6 @@ DEFAULTS = {
     "num_ctx": 16384,
     "repeat_penalty": 1.1,
     "temperature": 0.7,
-    "num_gpu": 99,
     "think": True,  # Enable chain-of-thought reasoning for qwen3
+    # num_gpu intentionally omitted - let Ollama auto-detect based on VRAM
 }

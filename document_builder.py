@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from genaitools import DEFAULTS, generate, count_words
+from genaitools import DEFAULTS, generate, count_words, tprint
 
 # =============================================================================
 # Module Constants
@@ -312,6 +312,7 @@ def generate_section(
     think: bool,
     verbose: bool,
     instructions: str | None = None,
+    num_gpu: int | None = None,
 ) -> SectionResult:
     """Generate a single section and extract its key points."""
     section_id = section["id"]
@@ -320,10 +321,10 @@ def generate_section(
     if verbose:
         deps = section.get("dependencies", [])
         dep_str = ", ".join(deps) if deps else "none"
-        print(f"  Dependencies: {dep_str}")
+        tprint(f"  Dependencies: {dep_str}")
         if deps:
             total_points = sum(len(previous_key_points.get(d, [])) for d in deps)
-            print(f"  Passing {total_points} key points from dependencies")
+            tprint(f"  Passing {total_points} key points from dependencies")
 
     # Build and send prompt
     prompt = build_section_prompt(
@@ -335,7 +336,7 @@ def generate_section(
     )
 
     if verbose:
-        print(f"  Calling Ollama ({model})...")
+        tprint(f"  Calling Ollama ({model})...")
 
     content = generate(
         prompt=prompt,
@@ -343,10 +344,11 @@ def generate_section(
         model=model,
         temperature=temperature,
         think=think,
+        num_gpu=num_gpu,
     )
 
     if content.startswith("Error:"):
-        print(f"  ERROR: {content}", file=sys.stderr)
+        tprint(f"  ERROR: {content}", file=sys.stderr)
         return SectionResult(
             id=section_id,
             title=section_title,
@@ -357,11 +359,11 @@ def generate_section(
 
     words = count_words(content)
     if verbose:
-        print(f"  Generated {words} words")
+        tprint(f"  Generated {words} words")
 
     # Extract key points
     if verbose:
-        print("  Extracting key points...")
+        tprint("  Extracting key points...")
 
     key_points = extract_key_points(
         section_title=section_title,
@@ -371,11 +373,11 @@ def generate_section(
     )
 
     if verbose and key_points:
-        print(f"  Key points ({len(key_points)}):")
+        tprint(f"  Key points ({len(key_points)}):")
         for point in key_points[:5]:  # Show first 5
-            print(f"    - {point[:KEY_POINTS_DISPLAY_LENGTH]}{'...' if len(point) > KEY_POINTS_DISPLAY_LENGTH else ''}")
+            tprint(f"    - {point[:KEY_POINTS_DISPLAY_LENGTH]}{'...' if len(point) > KEY_POINTS_DISPLAY_LENGTH else ''}")
         if len(key_points) > 5:
-            print(f"    ... and {len(key_points) - 5} more")
+            tprint(f"    ... and {len(key_points) - 5} more")
 
     return SectionResult(
         id=section_id,
@@ -468,7 +470,7 @@ def smooth_transitions(
         section_b = smoothed[i + 1]
 
         if verbose:
-            print(f"  Smoothing: '{section_a.title}' → '{section_b.title}'")
+            tprint(f"  Smoothing: '{section_a.title}' → '{section_b.title}'")
 
         # Extract ~last 500 chars of section A and ~first 500 chars of section B
         # This roughly corresponds to 2-3 paragraphs
@@ -506,14 +508,14 @@ def smooth_transitions(
 
         if response.startswith("Error:"):
             if verbose:
-                print(f"    Smoothing failed: {response}")
+                tprint(f"    Smoothing failed: {response}")
             continue
 
         # Extract smoothed parts
         smoothed_parts = extract_smoothed_parts(response)
         if smoothed_parts is None:
             if verbose:
-                print("    Could not parse smoothed response")
+                tprint("    Could not parse smoothed response")
             continue
 
         new_a_ending, new_b_beginning = smoothed_parts
@@ -543,7 +545,7 @@ def smooth_transitions(
         )
 
         if verbose:
-            print("    Transition smoothed")
+            tprint("    Transition smoothed")
 
     return smoothed
 
@@ -607,6 +609,12 @@ def main():
         help="Ollama model"
     )
     parser.add_argument(
+        "--num-gpu",
+        type=int,
+        default=None,
+        help="Number of GPU layers (default: let Ollama auto-detect)"
+    )
+    parser.add_argument(
         "--temperature",
         type=float,
         default=DEFAULTS["temperature"],
@@ -635,14 +643,14 @@ def main():
 
     # Check if output file already exists
     if args.output and Path(args.output).exists():
-        print(f"Error: Output file already exists: {args.output}", file=sys.stderr)
+        tprint(f"Error: Output file already exists: {args.output}", file=sys.stderr)
         sys.exit(1)
 
     # Load outline
     try:
         outline = load_outline(args.input)
     except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-        print(f"Failed to load outline: {e}", file=sys.stderr)
+        tprint(f"Failed to load outline: {e}", file=sys.stderr)
         sys.exit(1)
 
     metadata = outline["metadata"]
@@ -650,36 +658,36 @@ def main():
     research_context = outline.get("research", {}).get("context", "")
 
     # Print summary
-    print(f"Loading outline: {args.input}")
-    print(f"  Title: {metadata.get('title', 'Untitled')}")
-    print(f"  Sections: {len(sections)}")
-    print(f"  Total target: {metadata.get('total_word_count', 'unspecified')} words")
+    tprint(f"Loading outline: {args.input}")
+    tprint(f"  Title: {metadata.get('title', 'Untitled')}")
+    tprint(f"  Sections: {len(sections)}")
+    tprint(f"  Total target: {metadata.get('total_word_count', 'unspecified')} words")
 
     # Filter to single section if requested
     if args.section:
         sections = [s for s in sections if s["id"] == args.section]
         if not sections:
-            print(f"Section not found: {args.section}", file=sys.stderr)
+            tprint(f"Section not found: {args.section}", file=sys.stderr)
             sys.exit(1)
-        print(f"  Generating only: {args.section}")
+        tprint(f"  Generating only: {args.section}")
 
     # Dry run - just show plan
     if args.dry_run:
-        print("\nDry run - sections to generate:")
+        tprint("Dry run - sections to generate:")
         for section in sections:
             deps = section.get("dependencies", [])
             dep_str = f" (deps: {', '.join(deps)})" if deps else ""
-            print(f"  {section['order']}. {section['title']} ({section['word_count']} words){dep_str}")
-        print("\nOutline is valid. Remove --dry-run to generate.")
+            tprint(f"  {section['order']}. {section['title']} ({section['word_count']} words){dep_str}")
+        tprint("Outline is valid. Remove --dry-run to generate.")
         return
 
     # Generate sections
-    print()
+    tprint("")
     results: list[SectionResult] = []
     key_points: dict[str, list[str]] = {}
 
     for i, section in enumerate(sections, 1):
-        print(f"[{i}/{len(sections)}] Generating: {section['title']} ({section['word_count']} words)")
+        tprint(f"[{i}/{len(sections)}] Generating: {section['title']} ({section['word_count']} words)")
 
         result = generate_section(
             section=section,
@@ -692,44 +700,43 @@ def main():
             think=think_enabled,
             verbose=args.verbose,
             instructions=args.instructions,
+            num_gpu=args.num_gpu,
         )
 
         results.append(result)
         key_points[result.id] = result.key_points
-        print()
+        tprint("")
 
     # Optional smoothing pass
     if args.smooth and len(results) > 1:
-        print("Smoothing transitions between sections...")
+        tprint("Smoothing transitions between sections...")
         results = smooth_transitions(
             results=results,
             ollama_url=args.ollama_url,
             model=args.model,
             verbose=args.verbose,
         )
-        print()
+        tprint("")
 
     # Assemble document
     document = assemble_document(results, metadata)
     total_words = sum(r.word_count for r in results)
     target_words = metadata.get("total_word_count", 0)
 
-    print("Document complete!")
-    print(f"  Total words: {total_words}", end="")
     if target_words:
-        print(f" ({total_words * 100 // target_words}% of target)")
+        tprint(f"Document complete! Total words: {total_words} ({total_words * 100 // target_words}% of target)")
     else:
-        print()
+        tprint(f"Document complete! Total words: {total_words}")
 
     # Output
     if args.output:
         with open(args.output, "w") as f:
             f.write(document)
-        print(f"  Saved to: {args.output}")
+        tprint(f"  Saved to: {args.output}")
     else:
-        print("\n" + "=" * 60)
+        tprint("=" * 60)
         print(document)
-        print("=" * 60)
+        tprint("=" * 60)
 
 
 if __name__ == "__main__":

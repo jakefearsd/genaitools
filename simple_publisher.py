@@ -7,7 +7,7 @@ Uses optimal parameters discovered through tuning sessions.
 import argparse
 import requests
 
-from genaitools import DEFAULTS, search_duckduckgo, build_research_context, count_words
+from genaitools import DEFAULTS, search_duckduckgo, build_research_context, count_words, deep_research, tprint
 
 
 def build_prompt(
@@ -80,27 +80,30 @@ def generate_article(
     num_ctx: int = DEFAULTS["num_ctx"],
     repeat_penalty: float = DEFAULTS["repeat_penalty"],
     temperature: float = DEFAULTS["temperature"],
-    num_gpu: int = DEFAULTS["num_gpu"],
+    num_gpu: int | None = None,
     think: bool = DEFAULTS["think"],
 ) -> str:
     """Call Ollama API to generate the article."""
     url = f"{ollama_url}/api/generate"
+
+    options = {
+        "num_predict": num_predict,
+        "num_ctx": num_ctx,
+        "repeat_penalty": repeat_penalty,
+        "temperature": temperature,
+    }
+    if num_gpu is not None:
+        options["num_gpu"] = num_gpu
 
     payload = {
         "model": model,
         "prompt": prompt,
         "stream": False,
         "think": think,  # Enable chain-of-thought for supported models (qwen3)
-        "options": {
-            "num_predict": num_predict,
-            "num_ctx": num_ctx,
-            "repeat_penalty": repeat_penalty,
-            "temperature": temperature,
-            "num_gpu": num_gpu,
-        },
+        "options": options,
     }
 
-    print(f"Generating with {model} (num_predict={num_predict}, num_ctx={num_ctx}, repeat_penalty={repeat_penalty}, think={think})...")
+    tprint(f"Generating with {model} (num_predict={num_predict}, num_ctx={num_ctx}, repeat_penalty={repeat_penalty}, think={think})...")
 
     try:
         response = requests.post(url, json=payload, timeout=600)
@@ -134,7 +137,10 @@ def main():
     parser.add_argument("--temperature", type=float, default=DEFAULTS["temperature"], help="Temperature")
     parser.add_argument("--think", action="store_true", default=DEFAULTS["think"], help="Enable chain-of-thought reasoning")
     parser.add_argument("--no-think", action="store_true", help="Disable chain-of-thought reasoning")
+    parser.add_argument("--num-gpu", type=int, default=None, help="Number of GPU layers (default: let Ollama auto-detect)")
     parser.add_argument("--no-search", action="store_true", help="Skip DuckDuckGo search")
+    parser.add_argument("--deep-research", action="store_true", help="Fetch and summarize full web pages (slower, richer context)")
+    parser.add_argument("--no-cache", action="store_true", help="Skip research cache (use with --deep-research)")
 
     args = parser.parse_args()
 
@@ -144,6 +150,14 @@ def main():
     # Research phase
     if args.no_search:
         research = "Use your training knowledge to write about this topic."
+    elif args.deep_research:
+        research = deep_research(
+            topic=args.topic,
+            model=args.model,
+            ollama_url=args.ollama_url,
+            use_cache=not args.no_cache,
+            verbose=True,
+        )
     else:
         results = search_duckduckgo(args.topic)
         research = build_research_context(results)
@@ -160,11 +174,11 @@ def main():
     )
 
     # Show prompt to user
-    print("\n" + "=" * 60)
-    print("PROMPT BEING SENT TO MODEL:")
-    print("=" * 60)
+    tprint("=" * 60)
+    tprint("PROMPT BEING SENT TO MODEL:")
+    tprint("=" * 60)
     print(prompt)
-    print("=" * 60 + "\n")
+    tprint("=" * 60)
 
     # Generate
     article = generate_article(
@@ -175,22 +189,23 @@ def main():
         num_ctx=args.num_ctx,
         repeat_penalty=args.repeat_penalty,
         temperature=args.temperature,
+        num_gpu=args.num_gpu,
         think=think_enabled,
     )
 
     # Output
     word_count = count_words(article)
     percentage = int(word_count * 100 / args.words)
-    print(f"\nGenerated {word_count} words ({percentage}% of target)")
+    tprint(f"Generated {word_count} words ({percentage}% of target)")
 
     if args.output:
         with open(args.output, "w") as f:
             f.write(article)
-        print(f"Saved to: {args.output}")
+        tprint(f"Saved to: {args.output}")
     else:
-        print("\n" + "=" * 60)
+        tprint("=" * 60)
         print(article)
-        print("=" * 60)
+        tprint("=" * 60)
 
 
 if __name__ == "__main__":

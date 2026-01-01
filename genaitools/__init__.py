@@ -10,6 +10,8 @@ from .embeddings import (
     batch_get_embeddings,
     DEFAULT_EMBED_MODEL,
 )
+from .deep_research import deep_research
+from .output import tprint
 
 __all__ = [
     "DEFAULTS",
@@ -22,4 +24,6 @@ __all__ = [
     "find_similar_pairs",
     "batch_get_embeddings",
     "DEFAULT_EMBED_MODEL",
+    "deep_research",
+    "tprint",
 ]

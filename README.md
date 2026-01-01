@@ -4,8 +4,6 @@ A collection of Python tools for content generation and document management usin
 
 ## Overview
 
-This toolkit provides three main capabilities:
-
 | Tool | Purpose |
 |------|---------|
 | `simple_publisher.py` | One-shot article generation with web research |
@@ -41,7 +39,7 @@ curl http://localhost:11434/api/tags
 
 **One-shot article generation** with integrated DuckDuckGo research.
 
-### Usage
+### Quick Start
 
 ```bash
 # Basic usage
@@ -54,85 +52,163 @@ python simple_publisher.py \
   -c "focus on security best practices" \
   -w 2000 \
   -o article.md
+
+# With deep research (fetches and summarizes full web pages)
+python simple_publisher.py \
+  -t "Kubernetes Security Best Practices" \
+  --deep-research \
+  -o k8s-security.md
 ```
 
-### Options
+### Command Line Reference
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-t, --topic` | Article topic (required) | - |
+| `-a, --audience` | Target audience description | "college educated general audience" |
+| `--type` | Content type: tutorial, concept, guide, reference | tutorial |
 | `-w, --words` | Target word count | 1500 |
-| `-p, --persona` | Writer persona (e.g., "a data scientist") | None |
+| `-p, --persona` | Writer persona (e.g., "a data scientist with 10 years experience") | None |
 | `-c, --context` | Additional guidance for the writer | None |
-| `-o, --output` | Output file (or stdout) | stdout |
-| `--no-search` | Skip DuckDuckGo research | False |
-| `--deep-research` | Fetch full pages and summarize (richer context) | False |
-| `--no-cache` | Skip research cache (use with --deep-research) | False |
+| `-o, --output` | Output file path (omit for stdout) | stdout |
+
+**Research Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--no-search` | Skip DuckDuckGo research entirely | False |
+| `--deep-research` | Fetch full web pages and generate LLM summaries | False |
+| `--no-cache` | Force fresh fetch, skip research cache | False |
+
+**Model Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--ollama-url` | Ollama API URL | http://localhost:11434 |
+| `--model` | Ollama model name | qwen3:14b |
+| `--num-predict` | Maximum tokens to generate | 16384 |
+| `--num-ctx` | Context window size | 16384 |
+| `--temperature` | Sampling temperature (0.0-2.0) | 0.7 |
+| `--repeat-penalty` | Repetition penalty (1.0 = none) | 1.1 |
 | `--think` | Enable chain-of-thought reasoning | True |
-| `--model` | Ollama model | qwen3:14b |
+| `--no-think` | Disable chain-of-thought reasoning | False |
+| `--num-gpu` | GPU layers to offload (None = auto-detect) | None |
 
-### How It Works
+### Recommended Usage Patterns
 
-1. **Research**: Searches DuckDuckGo for relevant content (snippets or full pages with `--deep-research`)
-2. **Prompt Construction**: Builds a structured prompt with persona, task, guidance, research, and requirements
-3. **Generation**: Single LLM call generates the complete article
-4. **Output**: Writes markdown to file or stdout
+**Quick draft with minimal research:**
+```bash
+python simple_publisher.py -t "Topic" --no-search -w 1000
+```
+
+**High-quality article with deep research:**
+```bash
+python simple_publisher.py \
+  -t "Topic" \
+  --deep-research \
+  -p "an expert in the field" \
+  -w 2500 \
+  -o article.md
+```
+
+**Using a larger model (e.g., 30B):**
+```bash
+python simple_publisher.py \
+  -t "Topic" \
+  --model qwen3:30b \
+  --num-gpu 20 \
+  -o article.md
+```
 
 ---
 
 ## Tool 2: Multi-Phase Document Builder
 
-**Structured document generation** using YAML outlines for comprehensive tutorials, guides, and references.
+**Structured document generation** using YAML outlines for comprehensive tutorials, guides, and references. This two-step process allows you to review and edit the outline before generating content.
 
-### Workflow
+### Quick Start
 
 ```bash
 # Step 1: Generate structured outline
 python outline_builder.py \
   -t "Building REST APIs with FastAPI" \
-  -a "Python developers new to async" \
-  --type tutorial \
   -w 6000 \
   -s 7 \
   -o fastapi-outline.yaml
 
 # Step 2: (Optional) Edit the outline
-vim fastapi-outline.yaml
+# Review sections, adjust word counts, refine guidance
 
 # Step 3: Build document from outline
 python document_builder.py \
   -i fastapi-outline.yaml \
   -o fastapi-tutorial.md \
-  --verbose \
-  --smooth
+  --verbose
 ```
 
-### Outline Builder Options
+### Outline Builder
+
+Generates a structured YAML outline that defines document sections, dependencies, and guidance.
+
+#### Command Line Reference
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-t, --topic` | Document topic (required) | - |
+| `-a, --audience` | Target audience description | "college educated general audience" |
+| `--type` | Content type: tutorial, concept, guide, reference | tutorial |
 | `-w, --words` | Total target word count | 5000 |
-| `-s, --sections` | Number of sections | 5 |
-| `-a, --audience` | Target audience | General |
-| `--type` | Content type (tutorial/concept/guide/reference) | tutorial |
+| `-s, --sections` | Number of sections to generate | 5 |
 | `-p, --persona` | Writer persona | None |
-| `-c, --context` | Additional guidance | None |
-| `-o, --output` | Output YAML file | stdout |
-| `--deep-research` | Fetch full pages and summarize | False |
-| `--no-cache` | Skip research cache | False |
+| `-c, --context` | Additional guidance for outline generation | None |
+| `-o, --output` | Output YAML file (omit for stdout) | stdout |
 
-### Document Builder Options
+**Research Options:**
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-i, --input` | Input YAML outline (required) | - |
-| `-o, --output` | Output markdown file | stdout |
-| `--section` | Generate only one section (for testing) | None |
-| `--smooth` | Post-process to smooth transitions | False |
-| `--instructions` | Content constraints (e.g., "no code examples") | None |
-| `--verbose` | Show progress and key points | False |
+| `--no-search` | Skip DuckDuckGo research | False |
+| `--deep-research` | Fetch full pages and generate summaries | False |
+| `--no-cache` | Skip research cache | False |
+
+**Model Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--ollama-url` | Ollama API URL | http://localhost:11434 |
+| `--model` | Ollama model name | qwen3:14b |
+| `--temperature` | Sampling temperature | 0.7 |
+| `--num-predict` | Max tokens for outline generation | 8192 |
+| `--think` | Enable chain-of-thought reasoning | True |
+| `--no-think` | Disable chain-of-thought reasoning | False |
+| `--num-gpu` | GPU layers (None = auto-detect) | None |
+
+### Document Builder
+
+Generates the full document from a YAML outline, processing sections sequentially with key point extraction for continuity.
+
+#### Command Line Reference
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-i, --input` | Input YAML outline file (required) | - |
+| `-o, --output` | Output markdown file (omit for stdout) | stdout |
+| `--verbose` | Show detailed progress and key points | False |
 | `--dry-run` | Validate outline without generating | False |
+| `--section` | Generate only this section ID (for testing) | None |
+| `--smooth` | Post-process to smooth section transitions | False |
+| `--instructions` | Additional content constraints | None |
+
+**Model Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--ollama-url` | Ollama API URL | http://localhost:11434 |
+| `--model` | Ollama model name | qwen3:14b |
+| `--temperature` | Sampling temperature | 0.7 |
+| `--think` | Enable chain-of-thought reasoning | True |
+| `--no-think` | Disable chain-of-thought reasoning | False |
+| `--num-gpu` | GPU layers (None = auto-detect) | None |
 
 ### YAML Outline Schema
 
@@ -143,39 +219,91 @@ metadata:
   audience: "Target readers"
   content_type: "tutorial"
   total_word_count: 6000
-  persona: "a senior engineer"
-  guidance: "Focus on practical examples"
+  generated_at: "2024-12-30T10:00:00Z"
+  persona: "a senior engineer who values simplicity"
+  guidance: "Focus on practical examples over theory"
 
 research:
-  context: "DuckDuckGo search results..."
+  context: "Formatted DuckDuckGo search results or deep research summaries..."
 
 sections:
   - id: "introduction"
-    title: "Getting Started"
+    title: "Getting Started with FastAPI"
     order: 1
     word_count: 800
-    position: "intro"
+    position: "first"           # first, middle, or last
+    section_role: "introduce"   # introduce, develop, or conclude
+    transition_to: "core-concepts"
     dependencies: []
-    keywords: ["setup", "installation"]
-    guidance: "Cover prerequisites and basic concepts"
+    keywords: ["FastAPI", "async", "Python"]
+    guidance: "Hook the reader and explain why FastAPI matters"
     content_hints:
-      - "Explain why this topic matters"
-      - "List required tools"
+      - "Compare briefly to Flask/Django"
+      - "Mention automatic OpenAPI docs"
+
+  - id: "core-concepts"
+    title: "Core Concepts and Architecture"
+    order: 2
+    word_count: 1200
+    position: "middle"
+    section_role: "develop"
+    transition_to: "building-endpoints"
+    dependencies: ["introduction"]
+    keywords: ["Pydantic", "dependency injection", "async/await"]
+    guidance: "Explain the foundational concepts needed for the rest"
+    content_hints:
+      - "Show Pydantic model examples"
+      - "Explain the request lifecycle"
+```
+
+### Recommended Usage Patterns
+
+**Validate outline before generating:**
+```bash
+python document_builder.py -i outline.yaml --dry-run
+```
+
+**Generate with verbose progress (recommended):**
+```bash
+python document_builder.py -i outline.yaml -o document.md --verbose
+```
+
+**Test a single section:**
+```bash
+python document_builder.py -i outline.yaml --section core-concepts --verbose
+```
+
+**Add content constraints:**
+```bash
+python document_builder.py \
+  -i outline.yaml \
+  -o document.md \
+  --instructions "Use formal academic tone. Include citations where appropriate."
+```
+
+**Use a larger model for higher quality:**
+```bash
+python document_builder.py \
+  -i outline.yaml \
+  -o document.md \
+  --model qwen3:30b \
+  --verbose
 ```
 
 ### How It Works
 
-1. **Outline Generation**: LLM generates JSON structure, converted to YAML for editing
+1. **Outline Generation**: LLM generates JSON structure, converted to YAML for human editing
 2. **Section Ordering**: Sections sorted by `order` field with dependency tracking
-3. **Key Points Extraction**: After generating each section, 5-10 key facts are extracted
-4. **Context Passing**: Key points from dependencies are included in subsequent section prompts
-5. **Position Awareness**: Sections know if they're intro/middle/conclusion for appropriate tone
-6. **Transition Smoothing**: Optional post-processing to improve flow between sections
+3. **Key Points Extraction**: After each section, 5-10 key facts are extracted
+4. **Context Passing**: Key points from dependencies inform subsequent sections
+5. **Position Awareness**: Intro/middle/conclusion sections get appropriate instructions
+6. **Transition Smoothing**: Optional `--smooth` flag improves flow between sections
 
 ### Safety Features
 
-- **Output file check**: Fails immediately if output file already exists
-- **Dry-run mode**: Validate outline structure without making API calls
+- **Output file check**: Fails if output file already exists (prevents accidental overwrite)
+- **Dry-run mode**: Validate outline structure without API calls
+- **Timestamped output**: All progress messages include `[HH:MM:SS]` timestamps
 
 ---
 
@@ -183,7 +311,7 @@ sections:
 
 **Automated cross-reference linking** for markdown document collections using semantic similarity.
 
-### Usage
+### Quick Start
 
 ```bash
 # Preview mode - see what links would be created
@@ -192,112 +320,125 @@ python link_builder.py --dir ./docs --dry-run --verbose
 # Apply changes with custom threshold
 python link_builder.py --dir ./docs --similarity 0.7 --max-links 3
 
-# Recursive with report
-python link_builder.py --dir ./docs --recursive --output-report links.json
+# Generate report
+python link_builder.py --dir ./docs --output-report links.json
 ```
 
-### Options
+### Command Line Reference
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-d, --dir` | Directory containing markdown files (required) | - |
 | `--recursive` | Include subdirectories | False |
-| `--similarity` | Minimum similarity threshold (0-1) | 0.6 |
-| `--max-links` | Maximum links per file | 5 |
-| `--dry-run` | Preview without writing | False |
+| `--similarity` | Minimum similarity threshold (0.0-1.0) | 0.6 |
+| `--max-links` | Maximum links to add per file | 5 |
+| `--dry-run` | Preview changes without writing files | False |
 | `--verbose` | Show detailed progress | False |
-| `--embed-model` | Embedding model | nomic-embed-text |
-| `--model` | LLM for link generation | qwen3:14b |
-| `--output-report` | Write JSON report | None |
+| `--exclude` | Glob patterns to exclude (e.g., "drafts/*") | [] |
+| `--output-report` | Write JSON report of changes | None |
+
+**Model Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--ollama-url` | Ollama API URL | http://localhost:11434 |
+| `--model` | LLM for link text generation | qwen3:14b |
+| `--embed-model` | Model for embeddings | nomic-embed-text |
+
+### Recommended Usage Patterns
+
+**Always preview first:**
+```bash
+python link_builder.py --dir ./docs --dry-run --verbose
+```
+
+**Conservative linking (high confidence only):**
+```bash
+python link_builder.py --dir ./docs --similarity 0.75 --max-links 2
+```
+
+**Aggressive linking (more connections):**
+```bash
+python link_builder.py --dir ./docs --similarity 0.5 --max-links 8
+```
+
+**Exclude certain directories:**
+```bash
+python link_builder.py --dir ./docs --recursive --exclude "drafts/*" "archive/*"
+```
 
 ### How It Works
 
-The link builder uses a **hybrid approach** combining embeddings and LLM analysis:
-
-#### Phase 1: Document Indexing
+**Phase 1: Document Indexing**
 - Scan directory for `*.md` files
 - Extract title (first H1 or filename) and all headings
-- Generate embedding from: title + headings + first 8000 chars of content
+- Generate embedding from: title + headings + first 8000 chars
 - Store document metadata for comparison
 
-#### Phase 2: Candidate Discovery
-- Compute pairwise cosine similarity between all document embeddings
-- Filter pairs above the similarity threshold (default: 0.6)
-- Exclude self-links and already-linked document pairs
-- Sort by similarity score (highest first)
+**Phase 2: Candidate Discovery**
+- Compute pairwise cosine similarity between embeddings
+- Filter pairs above threshold (default: 0.6)
+- Exclude self-links and already-linked pairs
+- Sort by similarity (highest first)
 
-#### Phase 3: Link Generation
-For each candidate pair, the LLM analyzes both documents and returns:
-```json
-{
-  "should_link": true,
-  "confidence": 0.85,
-  "anchor_text": "Docker containers",
-  "context_before": "When working with",
-  "reasoning": "The source discusses container basics..."
-}
-```
+**Phase 3: Link Generation**
+- LLM analyzes each candidate pair
+- Returns anchor text and insertion point
+- Validates link placement (not in headings or existing links)
 
-#### Phase 4: File Update
+**Phase 4: File Update**
 - Insert markdown links at identified positions
-- Create **bidirectional links** (A→B and B→A)
-- Skip text inside existing links or headings
+- Create bidirectional links (A→B and B→A)
 - Idempotent: running twice won't create duplicates
-
-### Example Transformation
-
-**Before:**
-```markdown
-When working with Docker containers, you need to understand networking.
-```
-
-**After:**
-```markdown
-When working with [Docker containers](./docker-basics.md), you need to understand networking.
-```
-
-### Understanding Embeddings
-
-Embeddings are 768-dimensional vectors that capture semantic meaning:
-
-```python
-# Similar concepts have high cosine similarity
-"Docker containers" ↔ "Container orchestration"  → 0.85
-"Docker containers" ↔ "Medieval poetry"          → 0.40
-```
-
-The `--similarity` threshold controls how related documents must be before the LLM analyzes them for linking opportunities.
 
 ---
 
-## Shared Module: genaitools/
+## Shared Configuration
 
-Common utilities used across all tools:
+### Default Settings
 
-| Module | Functions |
-|--------|-----------|
-| `config.py` | `DEFAULTS` dict with Ollama URL, model params |
-| `ollama_client.py` | `generate()`, `count_words()` |
-| `research.py` | `search_duckduckgo()`, `build_research_context()` |
-| `embeddings.py` | `get_embedding()`, `cosine_similarity()`, `find_similar_pairs()` |
-| `deep_research.py` | `deep_research()` - RAG pipeline for richer context |
+All tools share defaults defined in `genaitools/config.py`:
+
+```python
+DEFAULTS = {
+    "ollama_url": "http://localhost:11434",
+    "model": "qwen3:14b",
+    "num_predict": 16384,
+    "num_ctx": 16384,
+    "repeat_penalty": 1.1,
+    "temperature": 0.7,
+    "think": True,
+}
+```
+
+Override any setting via command-line flags.
+
+### GPU Memory Management
+
+The `--num-gpu` flag controls GPU layer offloading:
+
+| Value | Behavior |
+|-------|----------|
+| (omitted) | Ollama auto-detects based on available VRAM |
+| `99` | Force all layers to GPU (may OOM on large models) |
+| `20` | Offload 20 layers to GPU, rest to CPU |
+| `0` | CPU-only inference |
+
+**Recommendation**: Omit `--num-gpu` unless you encounter issues. Ollama handles this well automatically.
 
 ### Deep Research (RAG)
 
 The `--deep-research` flag enables a richer research pipeline:
 
-1. **Search**: DuckDuckGo search for 3 relevant pages
-2. **Fetch**: Download full HTML pages (15s timeout)
-3. **Strip**: Remove scripts, styles, nav elements; extract plain text
+1. **Search**: DuckDuckGo for 3 relevant pages
+2. **Fetch**: Download full HTML (15s timeout)
+3. **Strip**: Remove scripts, styles, navigation
 4. **Summarize**: LLM generates 200-400 word focused summary per page
-5. **Cache**: Results cached by URL hash in `~/.cache/genaitools/research/`
+5. **Cache**: Results cached in `~/.cache/genaitools/research/`
 
 ```bash
-# With deep research
-python simple_publisher.py -t "Docker Security" --deep-research
-
 # Force fresh fetch (skip cache)
-python outline_builder.py -t "Kubernetes" --deep-research --no-cache
+python outline_builder.py -t "Topic" --deep-research --no-cache
 ```
 
 **Trade-offs**:
@@ -305,22 +446,46 @@ python outline_builder.py -t "Kubernetes" --deep-research --no-cache
 - 3 additional LLM calls for summarization
 - Much richer context (~1500-2500 chars of focused summaries)
 
-### Configuration
+### Timestamped Output
 
-Default settings in `genaitools/config.py`:
+All tools display timestamps on status messages:
 
-```python
-DEFAULTS = {
-    "ollama_url": "http://localhost:11434",
-    "model": "qwen3:14b",
-    "temperature": 0.7,
-    "num_ctx": 16384,
-    "num_predict": 4096,
-    "think": True,
-}
+```
+[10:15:32] Loading outline: fastapi-outline.yaml
+[10:15:32]   Title: Building REST APIs with FastAPI
+[10:15:32]   Sections: 7
+[10:15:32] [1/7] Generating: Getting Started (800 words)
+[10:16:45]   Generated 823 words
+[10:16:47]   Extracting key points...
+[10:16:52] [2/7] Generating: Core Concepts (1200 words)
 ```
 
-Override via command-line flags or environment.
+This helps track timing of long-running operations.
+
+---
+
+## Model Recommendations
+
+### Generation Models
+
+| Model | VRAM | Speed | Quality | Notes |
+|-------|------|-------|---------|-------|
+| qwen3:14b | ~10GB | Fast | Good | Recommended default |
+| qwen3:30b | ~20GB | Medium | Better | Use `--num-gpu` for partial offload |
+| qwen3:8b | ~6GB | Very Fast | Acceptable | For quick drafts |
+
+### Embedding Models
+
+| Model | Dimensions | Notes |
+|-------|------------|-------|
+| nomic-embed-text | 768 | Fast, MIT licensed, recommended |
+| mxbai-embed-large | 1024 | Higher quality, slower |
+
+### Chain-of-Thought
+
+- `--think` enables extended reasoning (works with qwen3, deepseek-r1)
+- `--no-think` disables for faster generation
+- Key points extraction always uses `think=False` for consistency
 
 ---
 
@@ -350,25 +515,48 @@ pytest tests/ --use-ollama --use-search
 | `test_outline_builder.py` | Prompt building, JSON extraction, YAML output |
 | `test_document_builder.py` | Outline loading, section prompts, key points |
 | `test_link_builder.py` | Embeddings, similarity, link insertion |
-| `test_deep_research.py` | Page fetching, HTML stripping, summarization, caching |
+| `test_deep_research.py` | Page fetching, HTML stripping, summarization |
+| `test_output.py` | Timestamped printing |
 
 ---
 
-## Model Support
+## Troubleshooting
 
-### Chain-of-Thought Reasoning
+### "500 Server Error" with large models
 
-- `--think` enables extended reasoning (works with qwen3, deepseek-r1)
-- `--no-think` disables for faster generation or unsupported models
-- Key points extraction always uses `think=False` for consistency
+**Cause**: Model too large for available GPU VRAM.
 
-### Recommended Models
+**Solutions**:
+1. Let Ollama auto-detect: remove any `--num-gpu` flag
+2. Force partial offload: `--num-gpu 20` (adjust based on VRAM)
+3. Use a smaller model: `--model qwen3:14b`
 
-| Task | Model | Notes |
-|------|-------|-------|
-| Content generation | qwen3:14b | Good balance of quality and speed |
-| Embeddings | nomic-embed-text | 768 dimensions, fast, MIT licensed |
-| Alternative | mxbai-embed-large | Higher quality embeddings (1024 dim) |
+### Output file already exists
+
+**Cause**: Safety feature to prevent accidental overwrite.
+
+**Solution**: Delete or rename the existing file, or use a different output path.
+
+### Slow generation
+
+**Possible causes**:
+1. Large context window filling up
+2. Chain-of-thought enabled
+3. Deep research fetching slow pages
+
+**Solutions**:
+1. Reduce word count targets
+2. Use `--no-think` for faster generation
+3. Use regular search instead of `--deep-research`
+
+### Research returns no results
+
+**Cause**: DuckDuckGo rate limiting or network issues.
+
+**Solutions**:
+1. Wait a few minutes and retry
+2. Use `--no-search` and rely on model knowledge
+3. Use cached results if available
 
 ---
 

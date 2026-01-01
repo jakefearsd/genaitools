@@ -125,7 +125,7 @@ def main():
     parser.add_argument("-a", "--audience", default="college educated general audience", help="Target audience")
     parser.add_argument("--type", default="tutorial", choices=["tutorial", "concept", "guide", "reference"],
                         help="Content type")
-    parser.add_argument("-w", "--words", type=int, default=DEFAULTS["word_count"], help="Target word count")
+    parser.add_argument("-w", "--words", type=int, default=1500, help="Target word count")
     parser.add_argument("-p", "--persona", help="Writer persona, e.g. 'a senior DevOps engineer with 15 years experience'")
     parser.add_argument("-c", "--context", help="Additional context/guidance, e.g. 'focus on security best practices'")
     parser.add_argument("-o", "--output", help="Output file, e.g. article.md (default: stdout)")

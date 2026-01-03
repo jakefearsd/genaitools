@@ -1,0 +1,79 @@
+{
+  "defaults": {
+    "audience": "Software developers evaluating new languages for projects or career growth",
+    "content_type": "guide",
+    "words": 5000,
+    "sections": 7,
+    "persona": "A polyglot software architect with production experience across multiple language ecosystems",
+    "model": "qwen3:30b",
+    "ollama_url": "http://inference.jakefear.com:11434",
+    "temperature": 0.7,
+    "deep_research": true,
+    "think": true,
+    "verbose": true,
+    "document_instructions": "Use a balanced, practical tone. Include concrete code examples where they illustrate key concepts. Focus on real-world applicability rather than theoretical benefits. Address both strengths and limitations honestly."
+  },
+
+  "output_dir": "./emerging-languages",
+  "cooldown_seconds": 15,
+
+  "topics": [
+    {
+      "topic": "Emerging Programming Languages and Their Specialized Use Cases",
+      "context": "This is the introductory article for a series. Provide a landscape overview of why new languages emerge, what problems they solve that existing languages don't, and briefly introduce 7 languages that will be covered in depth: Rust (systems/WebAssembly), Zig (systems/C replacement), Elixir (distributed/real-time), Mojo (AI/ML performance), Julia (scientific computing), Gleam (type-safe BEAM), and Carbon (C++ successor). Explain how to evaluate whether a new language is worth learning.",
+      "words": 6000,
+      "sections": 9,
+      "document_file": "00-Introduction.md"
+    },
+    {
+      "topic": "Rust for Systems Programming and WebAssembly",
+      "context": "Rank 1 by utility. Cover Rust's memory safety without garbage collection, ownership model, and zero-cost abstractions. Focus on practical use cases: CLI tools, WebAssembly, embedded systems, and replacing C/C++ in performance-critical code. Discuss the learning curve honestly, the borrow checker's role, and when Rust is overkill. Include adoption examples: AWS (Firecracker), Discord, Cloudflare, Microsoft.",
+      "words": 5500,
+      "sections": 8,
+      "document_file": "01-Rust.md"
+    },
+    {
+      "topic": "Zig as a Modern C Alternative",
+      "context": "Rank 2 by utility. Cover Zig's design philosophy: no hidden control flow, no hidden allocations, comptime. Focus on C interoperability, cross-compilation capabilities, and use in game development. Discuss how Bun (JavaScript runtime) is built with Zig. Compare to Rust - when would you choose Zig instead? Address the language's maturity and ecosystem gaps.",
+      "words": 5000,
+      "sections": 7,
+      "document_file": "02-Zig.md"
+    },
+    {
+      "topic": "Elixir for Distributed and Real-Time Systems",
+      "context": "Rank 3 by utility. Cover the BEAM VM's strengths: fault tolerance, hot code reloading, lightweight processes. Focus on Phoenix framework for web, LiveView for real-time UIs, and Nx/Livebook for machine learning. Discuss when Elixir shines (WhatsApp-style messaging, IoT) vs when it's not the right choice. Address the functional programming learning curve for OOP developers.",
+      "words": 5000,
+      "sections": 7,
+      "document_file": "03-Elixir.md"
+    },
+    {
+      "topic": "Mojo for High-Performance AI and ML",
+      "context": "Rank 4 by utility. Cover Mojo's promise: Python syntax with systems-level performance. Focus on AI/ML use cases where Python is too slow. Discuss the Modular ecosystem, integration with Python libraries, and MLIR foundation. Be honest about current limitations: still in early access, evolving rapidly, not open source. Compare to alternatives like Cython, Numba, JAX.",
+      "words": 4500,
+      "sections": 6,
+      "document_file": "04-Mojo.md"
+    },
+    {
+      "topic": "Julia for Scientific Computing and Numerical Analysis",
+      "context": "Rank 5 by utility. Cover Julia's multiple dispatch, JIT compilation, and numerical computing strengths. Focus on scientific computing, data science, and differential equations. Discuss the two-language problem Julia solves. Address ecosystem maturity, package quality variation, and time-to-first-plot latency. Compare to Python+NumPy and R for different use cases.",
+      "words": 4500,
+      "sections": 6,
+      "document_file": "05-Julia.md"
+    },
+    {
+      "topic": "Gleam for Type-Safe BEAM Programming",
+      "context": "Rank 6 by utility. Cover Gleam's value proposition: static types on the BEAM VM. Focus on interoperability with Erlang/Elixir, the friendly compiler errors, and fault tolerance inheritance. Discuss target audience: Elixir developers wanting types, or type-enthusiasts wanting BEAM benefits. Be honest about ecosystem size and when Elixir might be the better choice.",
+      "words": 4000,
+      "sections": 6,
+      "document_file": "06-Gleam.md"
+    },
+    {
+      "topic": "Carbon as a C++ Successor",
+      "context": "Rank 7 by utility. Cover Carbon's goals: modern language that interoperates seamlessly with C++. Focus on Google's motivation, the migration story from C++, and planned features. Be very clear about current status: experimental, not production-ready. Discuss alternatives like Rust, and when waiting for Carbon might make sense vs adopting Rust now. This is about the future potential.",
+      "words": 4000,
+      "sections": 6,
+      "persona": "A C++ veteran who has followed the language evolution and understands the pain points Carbon aims to address",
+      "document_file": "07-Carbon.md"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ env/
 # Output
 *.md
 !README.md
+!CLAUDE.md
 output/
 
 # OS

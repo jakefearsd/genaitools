@@ -8,6 +8,7 @@ A collection of Python tools for content generation and document management usin
 |------|---------|
 | `simple_publisher.py` | One-shot article generation with web research |
 | `outline_builder.py` + `document_builder.py` | Multi-phase structured document generation |
+| `batch_builder.py` | Batch processing multiple topics from JSON config |
 | `link_builder.py` | Automated cross-reference linking for markdown files |
 
 All tools use Ollama for LLM inference and are optimized for models like `qwen3:14b` running on 16GB GPUs.
@@ -307,7 +308,163 @@ python document_builder.py \
 
 ---
 
-## Tool 3: Link Builder
+## Tool 3: Batch Builder
+
+**Batch processing** for generating multiple documents from a JSON configuration file. Runs `outline_builder.py` + `document_builder.py` for each topic with configurable cooldown between runs.
+
+### Quick Start
+
+```bash
+# Preview what would be executed
+python batch_builder.py -i batch.json --dry-run
+
+# Run batch processing
+python batch_builder.py -i batch.json
+
+# Start from a specific topic (1-indexed)
+python batch_builder.py -i batch.json --start-at 3
+
+# Run only a single topic
+python batch_builder.py -i batch.json --only 2
+```
+
+### JSON Configuration
+
+```json
+{
+  "defaults": {
+    "audience": "A software engineer learning AWS",
+    "content_type": "tutorial",
+    "words": 8000,
+    "sections": 9,
+    "persona": "A sys admin with AWS experience",
+    "model": "qwen3:30b",
+    "ollama_url": "http://localhost:11434",
+    "temperature": 0.7,
+    "deep_research": false,
+    "think": true,
+    "verbose": true,
+    "document_instructions": "Use an academic and direct tone."
+  },
+  "output_dir": "./output",
+  "cooldown_seconds": 10,
+  "topics": [
+    {
+      "topic": "First AWS Deployment",
+      "context": "Focus on differences from on-premises deployment"
+    },
+    {
+      "topic": "AWS EC2 Instance Types",
+      "context": "Cost optimization for Java applications",
+      "words": 6000,
+      "sections": 7
+    }
+  ]
+}
+```
+
+### Command Line Reference
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-i, --input` | Input JSON batch file (required) | - |
+| `-o, --output-dir` | Override output directory from JSON | from JSON |
+| `--dry-run` | Show execution plan without running | False |
+| `--start-at N` | Start at topic N (1-indexed) | 1 |
+| `--only N` | Run only topic N (1-indexed) | None |
+| `--skip-outlines` | Use existing outlines, only build documents | False |
+| `--cooldown SECONDS` | Override cooldown between topics | from JSON or 10 |
+| `--no-cooldown` | Disable cooldown between topics | False |
+
+### JSON Schema
+
+#### Top-Level Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `defaults` | object | No | Default values applied to all topics |
+| `output_dir` | string | No | Output directory (default: `./output`) |
+| `cooldown_seconds` | integer | No | GPU cooldown between topics (default: 10) |
+| `topics` | array | **Yes** | Array of topic objects |
+
+#### Defaults Object (all optional)
+
+| Field | Type | Maps To | Default |
+|-------|------|---------|---------|
+| `audience` | string | `-a` | "college educated general audience" |
+| `content_type` | string | `--type` | "tutorial" |
+| `words` | integer | `-w` | 5000 |
+| `sections` | integer | `-s` | 5 |
+| `persona` | string | `-p` | None |
+| `model` | string | `--model` | "qwen3:14b" |
+| `ollama_url` | string | `--ollama-url` | from DEFAULTS |
+| `temperature` | float | `--temperature` | 0.7 |
+| `deep_research` | boolean | `--deep-research` | false |
+| `no_cache` | boolean | `--no-cache` | false |
+| `think` | boolean | `--think/--no-think` | true |
+| `verbose` | boolean | `--verbose` | true |
+| `document_instructions` | string | `--instructions` | None |
+| `num_gpu` | integer | `--num-gpu` | None (auto-detect) |
+
+#### Topic Object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `topic` | string | **Yes** | The topic for generation |
+| `context` | string | No | Outline guidance for `-c` |
+| `outline_file` | string | No | Override auto-generated outline filename |
+| `document_file` | string | No | Override auto-generated document filename |
+| Any default field | varies | No | Overrides the default for this topic only |
+
+### Output File Naming
+
+Auto-generated from topic if not specified:
+
+| Topic | Outline File | Document File |
+|-------|--------------|---------------|
+| "First AWS Deployment" | `first-aws-deployment-outline.yaml` | `FirstAwsDeployment.md` |
+| "AWS EC2 Instance Types" | `aws-ec2-instance-types-outline.yaml` | `AwsEc2InstanceTypes.md` |
+
+### Auto-Resume Behavior
+
+Before each phase, the tool checks if output exists:
+- If outline exists → skip outline generation
+- If document exists → skip document generation
+- If both exist → skip entire topic
+
+This allows interrupted batches to resume automatically.
+
+### Batch Report
+
+On completion, a report is saved to `{output_dir}/batch-report.json`:
+
+```json
+{
+  "input_file": "batch.json",
+  "started_at": "2024-12-30T14:30:00Z",
+  "completed_at": "2024-12-30T16:30:00Z",
+  "duration_seconds": 7200,
+  "summary": {
+    "total": 5,
+    "successful": 4,
+    "skipped": 1,
+    "failed": 0
+  },
+  "topics": [
+    {
+      "topic": "First AWS Deployment",
+      "status": "success",
+      "outline_file": "first-aws-deployment-outline.yaml",
+      "document_file": "FirstAwsDeployment.md",
+      "word_count": 8234
+    }
+  ]
+}
+```
+
+---
+
+## Tool 4: Link Builder
 
 **Automated cross-reference linking** for markdown document collections using semantic similarity.
 
@@ -514,6 +671,7 @@ pytest tests/ --use-ollama --use-search
 | `test_research.py` | DuckDuckGo search, context formatting |
 | `test_outline_builder.py` | Prompt building, JSON extraction, YAML output |
 | `test_document_builder.py` | Outline loading, section prompts, key points |
+| `test_batch_builder.py` | JSON loading, config merging, command building |
 | `test_link_builder.py` | Embeddings, similarity, link insertion |
 | `test_deep_research.py` | Page fetching, HTML stripping, summarization |
 | `test_output.py` | Timestamped printing |

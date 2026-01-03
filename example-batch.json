@@ -1,0 +1,49 @@
+{
+  "defaults": {
+    "audience": "A software engineer learning to deploy classic Java web app on AWS",
+    "content_type": "tutorial",
+    "words": 8000,
+    "sections": 9,
+    "persona": "A sys admin with extensive AWS Deployment Experience",
+    "model": "qwen3:30b",
+    "ollama_url": "http://inference.jakefear.com:11434",
+    "temperature": 0.7,
+    "deep_research": false,
+    "no_cache": false,
+    "think": true,
+    "verbose": true,
+    "document_instructions": "Use an academic and direct tone. Include citations where appropriate."
+  },
+
+  "output_dir": "./output",
+  "cooldown_seconds": 10,
+
+  "topics": [
+    {
+      "topic": "First AWS Deployment",
+      "context": "Describe the biggest differences and similarities in how the work gets done, and what things must be considered for AWS Deployment"
+    },
+    {
+      "topic": "AWS EC2 Instance Types and Selection",
+      "context": "Focus on cost optimization and right-sizing for Java applications",
+      "words": 6000,
+      "sections": 7
+    },
+    {
+      "topic": "AWS RDS for Java Applications",
+      "context": "Compare RDS to self-managed databases, cover connection pooling",
+      "audience": "Java developers with database experience",
+      "document_instructions": "Include code examples for JDBC configuration."
+    },
+    {
+      "topic": "AWS Load Balancing and Auto Scaling",
+      "context": "Cover ALB vs NLB, health checks, scaling policies",
+      "deep_research": true
+    },
+    {
+      "topic": "AWS S3 for Static Assets and File Storage",
+      "context": "Presigned URLs, lifecycle policies, CDN integration with CloudFront",
+      "persona": "A cloud architect focused on performance optimization"
+    }
+  ]
+}
